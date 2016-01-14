@@ -27,6 +27,6 @@
     <item>F1</item>
     
   </string-array>
-<string name="app_name">GVRF Widget Sample</string>
+<string name="app_name">GVRF Widget Viewer</string>
 <string name="my_url">facebook.com</string>
 </resources>
