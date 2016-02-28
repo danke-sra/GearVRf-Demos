@@ -125,7 +125,7 @@ public class EventsScript extends GVRScript {
             listener.onCursorControllerAdded(cursor);
         }
         GVRBaseSensor sensor = new GVRBaseSensor(gvrContext);
-        sensor.registerSensorEventListener(eventListener);
+        layoutSceneObject.getEventReceiver().addListener(eventListener);
         layoutSceneObject.setSensor(sensor);
     }
 
