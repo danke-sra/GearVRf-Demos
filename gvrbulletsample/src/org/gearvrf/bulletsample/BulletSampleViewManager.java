@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.vecmath.Matrix4f;
+import javax.vecmath.Quat4f;
+import javax.vecmath.Vector3f;
+
 import org.gearvrf.FutureWrapper;
 import org.gearvrf.GVRAndroidResource;
 import org.gearvrf.GVRCameraRig;
@@ -12,35 +16,44 @@ import org.gearvrf.GVRMesh;
 import org.gearvrf.GVRScene;
 import org.gearvrf.GVRSceneObject;
 import org.gearvrf.GVRScript;
-import org.siprop.bullet.Bullet;
-import org.siprop.bullet.Geometry;
-import org.siprop.bullet.MotionState;
-import org.siprop.bullet.RigidBody;
-import org.siprop.bullet.Transform;
-import org.siprop.bullet.shape.BoxShape;
-import org.siprop.bullet.shape.SphereShape;
-import org.siprop.bullet.shape.StaticPlaneShape;
-import org.siprop.bullet.util.Point3;
-import org.siprop.bullet.util.ShapeType;
-import org.siprop.bullet.util.Vector3;
+import org.gearvrf.bulletphysics.collision.broadphase.BroadphaseInterface;
+import org.gearvrf.bulletphysics.collision.broadphase.BroadphaseNativeType;
+import org.gearvrf.bulletphysics.collision.broadphase.DbvtBroadphase;
+import org.gearvrf.bulletphysics.collision.dispatch.CollisionDispatcher;
+import org.gearvrf.bulletphysics.collision.dispatch.DefaultCollisionConfiguration;
+import org.gearvrf.bulletphysics.collision.shapes.BoxShape;
+import org.gearvrf.bulletphysics.collision.shapes.SphereShape;
+import org.gearvrf.bulletphysics.collision.shapes.StaticPlaneShape;
+import org.gearvrf.bulletphysics.dynamics.DiscreteDynamicsWorld;
+import org.gearvrf.bulletphysics.dynamics.DynamicsWorld;
+import org.gearvrf.bulletphysics.dynamics.RigidBody;
+import org.gearvrf.bulletphysics.dynamics.RigidBodyConstructionInfo;
+import org.gearvrf.bulletphysics.dynamics.constraintsolver.SequentialImpulseConstraintSolver;
+import org.gearvrf.bulletphysics.linearmath.DefaultMotionState;
+import org.gearvrf.bulletphysics.linearmath.Transform;
 
 import android.graphics.Color;
 
 public class BulletSampleViewManager extends GVRScript {
+    private static final String TAG = BulletSampleViewManager.class.getSimpleName();
 
     private GVRContext mGVRContext = null;
-
-    private Bullet mBullet = null;
+    private DynamicsWorld dynamicsWorld;
 
     private Map<RigidBody, GVRSceneObject> rigidBodiesSceneMap = new HashMap<RigidBody, GVRSceneObject>();
 
     private static final float CUBE_MASS = 0.5f;
+    private static final float BALL_HEIGHT = 100f;
+
+    private Transform transform = new Transform();
+
+    private GVRScene scene;
 
     @Override
-    public void onInit(GVRContext gvrContext) throws Throwable {
+    public void onInit(GVRContext gvrContext) {
         mGVRContext = gvrContext;
 
-        GVRScene scene = mGVRContext.getNextMainScene();
+        scene = mGVRContext.getNextMainScene();
 
         GVRCameraRig mainCameraRig = scene.getMainCameraRig();
         mainCameraRig.getLeftCamera().setBackgroundColor(Color.BLACK);
@@ -49,20 +62,20 @@ public class BulletSampleViewManager extends GVRScript {
         mainCameraRig.getTransform().setPosition(0.0f, 6.0f, 0.0f);
 
         /*
-         * Create new Bullet instance.
-         * 
-         * The Bullet Physics JNI used is from
-         * http://www.badlogicgames.com/wordpress/?p=248 Its compiled as a jar
-         * and native so file, sources can be found at
-         * https://github.com/deepakrawat22/BulletJniFramework
+         * Init bullet
          */
-        mBullet = new Bullet();
+        BroadphaseInterface broadphase = new DbvtBroadphase();
+        DefaultCollisionConfiguration collisionConfiguration = new DefaultCollisionConfiguration();
+        CollisionDispatcher dispatcher = new CollisionDispatcher(collisionConfiguration);
+        SequentialImpulseConstraintSolver solver = new SequentialImpulseConstraintSolver();
+
         /*
          * Create the physics world.
          */
-        mBullet.createPhysicsWorld(new Vector3(-480.0f, -480.0f, -480.0f),
-                new Vector3(480.0f, 480.0f, 480.0f), 1024, new Vector3(0.0f,
-                        -9.8f, 0.0f));
+        dynamicsWorld = new DiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+
+        // set the gravity of our world
+        dynamicsWorld.setGravity(new Vector3f(0, -10f, 0));
 
         /*
          * Create the ground. A simple textured quad. In bullet it will be a
@@ -74,12 +87,19 @@ public class BulletSampleViewManager extends GVRScript {
         groundScene.getTransform().setPosition(0.0f, 0.0f, 0.0f);
         scene.addSceneObject(groundScene);
 
-        StaticPlaneShape floorShape = new StaticPlaneShape(new Vector3(0.0f,
+        StaticPlaneShape floorShape = new StaticPlaneShape(new Vector3f(0.0f,
                 1.0f, 0.0f), 0.0f);
-        Geometry floorGeometry = mBullet.createGeometry(floorShape, 0.0f,
-                new Vector3(0.0f, 0.0f, 0.0f));
-        MotionState floorState = new MotionState();
-        mBullet.createAndAddRigidBody(floorGeometry, floorState);
+
+        // setup the motion state
+        DefaultMotionState floorState = new DefaultMotionState(
+                new Transform(new Matrix4f(new Quat4f(0, 0, 0, 1), new Vector3f(0, 0, 0), 1.0f)));
+
+        RigidBodyConstructionInfo floorRigidBodyCI = new RigidBodyConstructionInfo(0 /* mass */,
+                floorState, floorShape, new Vector3f(0, 0, 0) /* inertia */);
+
+        RigidBody floorRigidBody = new RigidBody(floorRigidBodyCI);
+
+        dynamicsWorld.addRigidBody(floorRigidBody);
 
         /*
          * Create Some cubes in Bullet world and hit it with a sphere
@@ -117,22 +137,27 @@ public class BulletSampleViewManager extends GVRScript {
         /*
          * Throw a sphere from top
          */
-        addSphere(scene, 1.0f, 1.5f, 100.0f, -10.0f, 20.0f);
+        addSphere(scene, 1.0f, 1.5f, BALL_HEIGHT, -10.0f, 20.0f);
     }
+
+    int cnt = 0;
+    DefaultMotionState sphereState_;
+    Transform sphereOrigin_;
 
     @Override
     public void onStep() {
-        mBullet.doSimulation(1.0f / 60.0f, 10);
+        dynamicsWorld.stepSimulation(1.0f / 60.f, 10);
         for (RigidBody body : rigidBodiesSceneMap.keySet()) {
-            if (body.geometry.shape.getType() == ShapeType.SPHERE_SHAPE_PROXYTYPE
-                    || body.geometry.shape.getType() == ShapeType.BOX_SHAPE_PROXYTYPE) {
+            if (body.getCollisionShape().getShapeType() == BroadphaseNativeType.SPHERE_SHAPE_PROXYTYPE
+                    || body.getCollisionShape().getShapeType() == BroadphaseNativeType.BOX_SHAPE_PROXYTYPE) {
+                body.getMotionState().getWorldTransform(transform);
                 rigidBodiesSceneMap
-                        .get(body)
-                        .getTransform()
-                        .setPosition(
-                                body.motionState.resultSimulation.originPoint.x,
-                                body.motionState.resultSimulation.originPoint.y,
-                                body.motionState.resultSimulation.originPoint.z);
+                .get(body)
+                .getTransform()
+                .setPosition(
+                        transform.origin.x,
+                        transform.origin.y,
+                        transform.origin.z);
             }
         }
     }
@@ -169,19 +194,21 @@ public class BulletSampleViewManager extends GVRScript {
      * in Bullet physics world and scene graph.
      */
     private void addCube(GVRScene scene, float x, float y, float z, float mass) {
-        BoxShape boxShape = new BoxShape(new Vector3(0.5f, 0.5f, 0.5f));
-        Geometry boxGeometry = mBullet.createGeometry(boxShape, mass,
-                new Vector3(0.0f, 0.0f, 0.0f));
-        MotionState boxState = new MotionState();
-        boxState.worldTransform = new Transform(new Point3(x, y, z));
-        RigidBody boxBody = mBullet
-                .createAndAddRigidBody(boxGeometry, boxState);
+        BoxShape boxShape = new BoxShape(new Vector3f(0.5f, 0.5f, 0.5f));
+
+        DefaultMotionState boxState = new DefaultMotionState(
+                new Transform(new Matrix4f(new Quat4f(0, 0, 0, 1), new Vector3f(x, y, z), 1.0f)));
+
+        RigidBodyConstructionInfo boxRigidBodyCI =
+                new RigidBodyConstructionInfo(mass, boxState, boxShape, new Vector3f(0, 0, 0));
+        RigidBody boxRigidBody = new RigidBody(boxRigidBodyCI);
+        dynamicsWorld.addRigidBody(boxRigidBody);
 
         GVRSceneObject cubeObject = meshWithTexture("cube.obj", "cube.jpg");
 
         cubeObject.getTransform().setPosition(x, y, z);
         scene.addSceneObject(cubeObject);
-        rigidBodiesSceneMap.put(boxBody, cubeObject);
+        rigidBodiesSceneMap.put(boxRigidBody, cubeObject);
     }
 
     /*
@@ -191,19 +218,20 @@ public class BulletSampleViewManager extends GVRScript {
     private void addSphere(GVRScene scene, float radius, float x, float y,
             float z, float mass) {
         SphereShape sphereShape = new SphereShape(radius);
-        Geometry sphereGeometry = mBullet.createGeometry(sphereShape, mass,
-                new Vector3(0.0f, 0.0f, 0.0f));
-        MotionState sphereState = new MotionState();
-        sphereState.worldTransform = new Transform(new Point3(x, y, z));
-        RigidBody sphereBody = mBullet.createAndAddRigidBody(sphereGeometry,
-                sphereState);
+        DefaultMotionState sphereState = new DefaultMotionState(
+                sphereOrigin_ = new Transform(new Matrix4f(new Quat4f(0, 0, 0, 1), new Vector3f(x, y, z), 1.0f)));
+        sphereState_ = sphereState;
+
+        RigidBodyConstructionInfo sphereRigidBodyCI =
+                new RigidBodyConstructionInfo(mass, sphereState, sphereShape, new Vector3f(0, 0, 0));
+        RigidBody sphereRigidBody = new RigidBody(sphereRigidBodyCI);
+        dynamicsWorld.addRigidBody(sphereRigidBody);
 
         GVRSceneObject sphereObject = meshWithTexture("sphere.obj",
                 "sphere.jpg");
 
         sphereObject.getTransform().setPosition(x, y, z);
         scene.addSceneObject(sphereObject);
-        rigidBodiesSceneMap.put(sphereBody, sphereObject);
+        rigidBodiesSceneMap.put(sphereRigidBody, sphereObject);
     }
-
 }
