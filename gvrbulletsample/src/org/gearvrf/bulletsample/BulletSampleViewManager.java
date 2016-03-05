@@ -12,21 +12,23 @@ import org.gearvrf.GVRMesh;
 import org.gearvrf.GVRScene;
 import org.gearvrf.GVRSceneObject;
 import org.gearvrf.GVRScript;
-import org.siprop.bullet.Bullet;
-import org.siprop.bullet.Geometry;
-import org.siprop.bullet.MotionState;
-import org.siprop.bullet.RigidBody;
-import org.siprop.bullet.Transform;
-import org.siprop.bullet.shape.BoxShape;
-import org.siprop.bullet.shape.SphereShape;
-import org.siprop.bullet.shape.StaticPlaneShape;
-import org.siprop.bullet.util.Point3;
-import org.siprop.bullet.util.ShapeType;
-import org.siprop.bullet.util.Vector3;
+import org.gearvrf.bullet.Bullet;
+import org.gearvrf.bullet.Geometry;
+import org.gearvrf.bullet.MotionState;
+import org.gearvrf.bullet.RigidBody;
+import org.gearvrf.bullet.Transform;
+import org.gearvrf.bullet.shape.BoxShape;
+import org.gearvrf.bullet.shape.SphereShape;
+import org.gearvrf.bullet.shape.StaticPlaneShape;
+import org.gearvrf.bullet.util.Point3;
+import org.gearvrf.bullet.util.ShapeType;
+import org.gearvrf.bullet.util.Vector3;
+import org.gearvrf.utility.Log;
 
 import android.graphics.Color;
 
 public class BulletSampleViewManager extends GVRScript {
+    private static final String TAG = BulletSampleViewManager.class.getSimpleName();
 
     private GVRContext mGVRContext = null;
 
@@ -54,7 +56,7 @@ public class BulletSampleViewManager extends GVRScript {
          * The Bullet Physics JNI used is from
          * http://www.badlogicgames.com/wordpress/?p=248 Its compiled as a jar
          * and native so file, sources can be found at
-         * https://github.com/deepakrawat22/BulletJniFramework
+         * https://github.com/danke-sra/BulletJniFramework
          */
         mBullet = new Bullet();
         /*
@@ -126,13 +128,16 @@ public class BulletSampleViewManager extends GVRScript {
         for (RigidBody body : rigidBodiesSceneMap.keySet()) {
             if (body.geometry.shape.getType() == ShapeType.SPHERE_SHAPE_PROXYTYPE
                     || body.geometry.shape.getType() == ShapeType.BOX_SHAPE_PROXYTYPE) {
+                Transform xform = body.motionState.resultSimulation;
+                Log.d(TAG, "%s %f %f %f", body.geometry.shape,
+                        xform.originPoint.x, xform.originPoint.y, xform.originPoint.z);
                 rigidBodiesSceneMap
                         .get(body)
                         .getTransform()
                         .setPosition(
-                                body.motionState.resultSimulation.originPoint.x,
-                                body.motionState.resultSimulation.originPoint.y,
-                                body.motionState.resultSimulation.originPoint.z);
+                                xform.originPoint.x,
+                                xform.originPoint.y,
+                                xform.originPoint.z);
             }
         }
     }
