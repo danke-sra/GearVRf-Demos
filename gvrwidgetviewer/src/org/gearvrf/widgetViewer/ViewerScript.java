@@ -25,11 +25,11 @@ import org.gearvrf.*;
 import org.gearvrf.GVRMaterial.GVRShaderType;
 import org.gearvrf.GVRRenderData.GVRRenderMaskBit;
 
-import org.gearvrf.plugins.widget.GVRWidgetPluginActivity;
-import org.gearvrf.plugins.widget.GVRWidgetSceneObjectMeshInfo;
-import org.gearvrf.scene_objects.GVRWidgetSceneObject;
 //import org.gearvrf.scene_objects.GVRListViewSceneObject;
 import org.gearvrf.scene_objects.GVRWebViewSceneObject;
+import org.gearvrf.widgetplugin.GVRWidgetPluginActivity;
+import org.gearvrf.widgetplugin.GVRWidgetSceneObject;
+import org.gearvrf.widgetplugin.GVRWidgetSceneObjectMeshInfo;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
@@ -900,7 +900,7 @@ public class ViewerScript extends GVRScript {
             // widgetbuttonObject.getTransform().rotateByAxis(-30,
             // 1.0f, 0.0f, 0.0f);
             mainScene.addSceneObject(widgetbuttonObject);
-            mainScene.addSceneObject(widgetbuttonObject2);
+          //  mainScene.addSceneObject(widgetbuttonObject2);
             GVREyePointeeHolder eyePointeeHolder2 = new GVREyePointeeHolder(
                     gvrContext);
             GVRMeshEyePointee eyePointee2 = new GVRMeshEyePointee(gvrContext,

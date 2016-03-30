@@ -19,11 +19,12 @@ import java.lang.reflect.Method;
 
 import org.gearvrf.GVRWidgetViewer.R;
 
-import org.gearvrf.plugins.widget.GVRWidgetPluginActivity;
+
 
 import org.gearvrf.util.VRTouchPadGestureDetector;
 import org.gearvrf.util.VRTouchPadGestureDetector.OnTouchPadGestureListener;
 import org.gearvrf.util.VRTouchPadGestureDetector.SwipeDirection;
+import org.gearvrf.widgetplugin.GVRWidgetPluginActivity;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
