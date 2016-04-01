@@ -24,14 +24,11 @@ import javax.microedition.khronos.opengles.GL10;
 import org.gearvrf.*;
 import org.gearvrf.GVRMaterial.GVRShaderType;
 import org.gearvrf.GVRRenderData.GVRRenderMaskBit;
-
 //import org.gearvrf.scene_objects.GVRListViewSceneObject;
-import org.gearvrf.scene_objects.GVRWebViewSceneObject;
-import org.gearvrf.widgetplugin.GVRWidgetPluginActivity;
+import org.gearvrf.widgetplugin.GVRWidgetPlugin;
 import org.gearvrf.widgetplugin.GVRWidgetSceneObject;
 import org.gearvrf.widgetplugin.GVRWidgetSceneObjectMeshInfo;
 
-import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.egl.EGLContext;
 import javax.microedition.khronos.egl.EGLDisplay;
@@ -47,7 +44,6 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuff.Mode;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.Drawable;
-
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -67,6 +63,7 @@ public class ViewerScript extends GVRScript {
 
     private static final String TAG = "ViewerScript";
 
+    private GVRWidgetPlugin mPlugin;
     private GVRContext mGVRContext = null;
     public Context mContext;
     private MetalOnlyShader mMetalOnlyShader = null;
@@ -136,7 +133,7 @@ public class ViewerScript extends GVRScript {
 
     public GVRSceneObject[] Objects = new GVRSceneObject[THUMBNAIL_NUM];
 
-    private GVRWidgetPluginActivity mActivity;
+    private GVRActivity mActivity;
     private GLWebView view = null;
 
     private Surface mSurface;
@@ -165,8 +162,9 @@ public class ViewerScript extends GVRScript {
     public boolean mLookInside = false;
     public float zoomlevel = -2.0f;
 
-    ViewerScript(GVRActivity activity, View v, Bitmap b) {
-        mActivity = (GVRWidgetPluginActivity) activity;
+    ViewerScript(GVRWidgetPlugin plugin, View v, Bitmap b) {
+        mPlugin = plugin;
+        mActivity = mPlugin.getGVRActivity();
         view = (GLWebView) v;
         bb = b;
     }
@@ -179,7 +177,6 @@ public class ViewerScript extends GVRScript {
 
     @Override
     public void onInit(GVRContext gvrContext) {
-
         mGVRContext = gvrContext;
         mContext = mGVRContext.getContext();
         mMetalOnlyShader = new MetalOnlyShader(mGVRContext);
@@ -779,7 +776,7 @@ public class ViewerScript extends GVRScript {
 
             // }
             Log.e("datta", "generating texture now=" + libGDxTexture);
-            texture = new GVRSharedTexture(gvrContext, mActivity.getTextureId());
+            texture = new GVRSharedTexture(gvrContext, mPlugin.getTextureId());
 
             /*
              * GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
@@ -811,11 +808,11 @@ public class ViewerScript extends GVRScript {
             info2.mBottomRightOfView = new int[] { 500, 500 };
             info2.mTopLeftOfView = new int[] { 251, 0 };*/
             widgetbuttonObject = new GVRWidgetSceneObject(mGVRContext,
-                    mActivity.getTextureId(), info, mActivity.getWidth(),
-                    mActivity.getHeight());
+                    mPlugin.getTextureId(), info, mPlugin.getWidth(),
+                    mPlugin.getHeight());
             widgetbuttonObject2 = new GVRWidgetSceneObject(mGVRContext,
-                    mActivity.getTextureId(), info2, mActivity.getWidth(),
-                    mActivity.getHeight());
+                    mPlugin.getTextureId(), info2, mPlugin.getWidth(),
+                    mPlugin.getHeight());
             GVRRenderData ldata = new GVRRenderData(mGVRContext);
             GVRRenderData ldata2 = new GVRRenderData(mGVRContext);
             // GVRMesh mesh21 = mGVRContext.loadMesh(new GVRAndroidResource(
@@ -1467,7 +1464,7 @@ public class ViewerScript extends GVRScript {
         if (/* SelectionMode && */pickedHolders.length > 0) {
             GVRSceneObject pickedObject = pickedHolders[0].getOwnerObject();
             coords = pickedObject.getEyePointeeHolder().getHit();
-            mActivity.setPickedObject(pickedObject);
+            mPlugin.setPickedObject(pickedObject);
             for (int i = 0; i < THUMBNAIL_NUM; ++i) {
                 if (ThumbnailObject[i].equals(pickedObject)) {
                     // ThumbnailSelected = i;
